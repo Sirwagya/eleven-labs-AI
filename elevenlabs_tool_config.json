@@ -9,7 +9,7 @@
   "tool_error_handling_mode": "auto",
   "execution_mode": "immediate",
   "api_schema": {
-    "url": "https://surfy-librada-dartingly.ngrok-free.dev/api/save-profile",
+    "url": "https://<your-ngork-link>/api/save-profile", 
     "method": "POST",
     "path_params_schema": [],
     "query_params_schema": [],
