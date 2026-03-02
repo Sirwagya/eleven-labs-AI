@@ -1,0 +1,30 @@
+{
+  "name": "save_child_profile",
+  "description": "Save structured child profile data to the backend database. Call this tool after collecting the child's name, age, gender, and interests from the conversation.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "The child's name"
+      },
+      "age": {
+        "type": "integer",
+        "description": "The child's age in years"
+      },
+      "gender": {
+        "type": "string",
+        "enum": ["boy", "girl"],
+        "description": "The child's gender (boy or girl)"
+      },
+      "interests": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "A list of the child's interests and hobbies"
+      }
+    },
+    "required": ["name", "age", "gender", "interests"]
+  }
+}
