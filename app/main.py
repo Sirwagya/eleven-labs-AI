@@ -46,10 +46,10 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="ElevenLabs Child Profile API",
     description=(
-        "Receives structured child profile data from the ElevenLabs Agent "
-        "save_child_profile server tool and stores it in a local MongoDB instance."
+        "Manages child profile orders via ElevenLabs Agent tool calls. "
+        "Supports creating, retrieving, updating, and cancelling profiles."
     ),
-    version="2.0.0",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -58,7 +58,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],          # tighten in production
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

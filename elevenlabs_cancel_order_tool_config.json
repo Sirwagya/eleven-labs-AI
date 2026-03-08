@@ -1,0 +1,37 @@
+{
+    "type": "webhook",
+    "name": "cancel_order",
+    "description": "Cancel an existing order by permanently deleting the child profile from the database. The user must provide their order ID which starts with 'OUM' followed by 8 digits (e.g. OUM12345678). Confirm with the user before calling this tool, as this action cannot be undone.",
+    "disable_interruptions": false,
+    "force_pre_tool_speech": "auto",
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "execution_mode": "immediate",
+    "api_schema": {
+        "url": "https://<your-ngrok-link>/api/cancel-order",
+        "method": "DELETE",
+        "path_params_schema": [],
+        "query_params_schema": [
+            {
+                "id": "order_id",
+                "type": "string",
+                "value_type": "llm_prompt",
+                "description": "The order ID of the order to cancel and delete.\nIt starts with 'OUM' followed by 8 digits (e.g. OUM12345678).\nThis field is required.",
+                "dynamic_variable": "",
+                "constant_value": "",
+                "enum": null,
+                "is_system_provided": false,
+                "required": true
+            }
+        ],
+        "request_body_schema": null,
+        "request_headers": [],
+        "auth_connection": null
+    },
+    "assignments": [],
+    "response_timeout_secs": 20,
+    "dynamic_variables": {
+        "dynamic_variable_placeholders": {}
+    }
+}

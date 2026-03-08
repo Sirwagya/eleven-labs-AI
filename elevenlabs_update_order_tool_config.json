@@ -1,0 +1,112 @@
+{
+    "type": "webhook",
+    "name": "update_order",
+    "description": "Update an existing child profile/order in the backend database. The user must provide their order ID (starts with 'OUM' followed by 8 digits). Then ask which fields they want to change — name, age, gender, order type, or interests. Only send the fields that need to change.",
+    "disable_interruptions": false,
+    "force_pre_tool_speech": "auto",
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "execution_mode": "immediate",
+    "api_schema": {
+        "url": "https://<your-ngrok-link>/api/update-order",
+        "method": "PUT",
+        "path_params_schema": [],
+        "query_params_schema": [],
+        "request_body_schema": {
+            "id": "body",
+            "type": "object",
+            "description": "Use this tool to update an existing child profile in the backend database.\n\nThe order_id field is always required and must start with 'OUM' followed by 8 digits.\nAll other fields are optional — only include the fields the user wants to change.\n\nDo not summarize.\nDo not send free text.\nSend structured JSON exactly matching the defined schema.\nOnly call the tool once the order_id and at least one field to update are confirmed.",
+            "properties": [
+                {
+                    "id": "order_id",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The order ID of the order to update.\nIt starts with 'OUM' followed by 8 digits (e.g. OUM12345678).\nThis field is always required.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": true
+                },
+                {
+                    "id": "name",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new name for the child.\nOnly include this field if the user wants to change the name.\nReturn only the name string.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "age",
+                    "type": "number",
+                    "value_type": "llm_prompt",
+                    "description": "The new age for the child as a positive integer (1–18).\nOnly include this field if the user wants to change the age.\nReturn only the number.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "gender",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new gender for the child.\nMust be either \"boy\" or \"girl\".\nOnly include this field if the user wants to change the gender.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": [
+                        "boy",
+                        "girl"
+                    ],
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "order_type",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new order type.\nMust be either \"story book\" or \"movie\".\nOnly include this field if the user wants to change the order type.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": [
+                        "story book",
+                        "movie"
+                    ],
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "interests",
+                    "type": "array",
+                    "description": "The new list of interests or hobbies (max 10).\nOnly include this field if the user wants to change the interests.\nThis will replace the entire interests list.",
+                    "items": {
+                        "id": "interests_item",
+                        "type": "string",
+                        "value_type": "llm_prompt",
+                        "description": "A single interest or hobby as a short descriptive word or phrase.",
+                        "dynamic_variable": "",
+                        "constant_value": "",
+                        "enum": null,
+                        "is_system_provided": false,
+                        "required": false
+                    },
+                    "required": false,
+                    "value_type": "llm_prompt"
+                }
+            ],
+            "required": false,
+            "value_type": "llm_prompt"
+        },
+        "request_headers": [],
+        "auth_connection": null
+    },
+    "assignments": [],
+    "response_timeout_secs": 20,
+    "dynamic_variables": {
+        "dynamic_variable_placeholders": {}
+    }
+}

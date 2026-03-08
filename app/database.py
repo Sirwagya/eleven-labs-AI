@@ -9,6 +9,7 @@ Exposes:
 from __future__ import annotations
 
 import logging
+import re
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -29,7 +30,9 @@ async def lifespan(app: FastAPI):
     """FastAPI lifespan: connect to MongoDB on startup, close on shutdown."""
     global _client, _database
 
-    logger.info("Connecting to MongoDB at %s …", settings.mongodb_url)
+    # Mask credentials in the URL for safe logging
+    safe_url = re.sub(r"://[^@]+@", "://***:***@", settings.mongodb_url)
+    logger.info("Connecting to MongoDB at %s …", safe_url)
     _client = AsyncIOMotorClient(
         settings.mongodb_url,
         serverSelectionTimeoutMS=5000,
@@ -49,6 +52,7 @@ async def lifespan(app: FastAPI):
     profiles = _database["profiles"]
     await profiles.create_index("name")
     await profiles.create_index("created_at")
+    await profiles.create_index("order_id", unique=True, sparse=True)
     logger.info("Indexes ensured on 'profiles' collection.")
 
     yield  # ← application runs here

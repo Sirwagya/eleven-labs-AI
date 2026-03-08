@@ -1,7 +1,7 @@
 {
   "type": "webhook",
   "name": "save_child_profile",
-  "description": "Save structured child profile data to the backend database. Call this tool ONLY after collecting all required fields: name, age, gender (boy or girl), and interests (array of strings).",
+  "description": "Save structured child profile data to the backend database. Call this tool ONLY after collecting all required fields: name, age, gender (boy or girl), order_type (story book or movie), and interests (array of strings). The system will return a unique order ID starting with OUM.",
   "disable_interruptions": false,
   "force_pre_tool_speech": "auto",
   "tool_call_sound": null,
@@ -9,14 +9,14 @@
   "tool_error_handling_mode": "auto",
   "execution_mode": "immediate",
   "api_schema": {
-    "url": "https://<your-ngork-link>/api/save-profile", 
+    "url": "https://<your-ngrok-link>/api/save-profile",
     "method": "POST",
     "path_params_schema": [],
     "query_params_schema": [],
     "request_body_schema": {
       "id": "body",
       "type": "object",
-      "description": "Use this tool to save a structured child profile to the backend database.\n\nCall this tool ONLY after collecting all required fields from the user:\n- name\n- age\n- gender (must be \"boy\" or \"girl\")\n- interests (must be an array of strings)\n\nDo not summarize.\nDo not send free text.\nSend structured JSON exactly matching the defined schema.\nOnly call the tool once all fields are clearly provided.\n\nAll fields are required.\nIf any required field is missing, ask the user for clarification before calling the tool.\nOnly call the tool once all values are confidently extracted.",
+      "description": "Use this tool to save a structured child profile to the backend database.\n\nCall this tool ONLY after collecting all required fields from the user:\n- name\n- age\n- gender (must be \"boy\" or \"girl\")\n- order_type (must be \"story book\" or \"movie\")\n- interests (must be an array of strings)\n\nDo not summarize.\nDo not send free text.\nSend structured JSON exactly matching the defined schema.\nOnly call the tool once all fields are clearly provided.\n\nAll fields are required.\nIf any required field is missing, ask the user for clarification before calling the tool.\nOnly call the tool once all values are confidently extracted.\n\nThe response will contain an order_id starting with 'OUM' — always tell the user their order ID after saving.",
       "properties": [
         {
           "id": "name",
@@ -33,7 +33,7 @@
           "id": "age",
           "type": "number",
           "value_type": "llm_prompt",
-          "description": "The child's age as a positive integer in years.\nDo not include text such as \"years old\".\nReturn only the number.",
+          "description": "The child's age as a positive integer in years (1–18).\nDo not include text such as \"years old\".\nReturn only the number.",
           "dynamic_variable": "",
           "constant_value": "",
           "enum": null,
@@ -55,9 +55,23 @@
           "required": true
         },
         {
+          "id": "order_type",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "The type of order the user wants.\nMust be either \"story book\" or \"movie\".\nAsk the user whether they want a story book or a movie if not already specified.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": [
+            "story book",
+            "movie"
+          ],
+          "is_system_provided": false,
+          "required": true
+        },
+        {
           "id": "interests",
           "type": "array",
-          "description": "A list of the child's interests or hobbies mentioned by the user.\nEach interest must be a separate string element in the array.\nDo not combine multiple interests into one string.\nReturn an empty array if none are provided.",
+          "description": "A list of the child's interests or hobbies mentioned by the user.\nEach interest must be a separate string element in the array.\nDo not combine multiple interests into one string.\nReturn an empty array if none are provided.\nMaximum 10 interests.",
           "items": {
             "id": "interests_item",
             "type": "string",

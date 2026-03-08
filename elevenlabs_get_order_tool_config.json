@@ -1,0 +1,37 @@
+{
+    "type": "webhook",
+    "name": "get_order_details",
+    "description": "Retrieve order/profile details from the backend database using the order ID. The user must provide their order ID which starts with 'OUM' followed by 8 digits (e.g. OUM12345678). Do NOT accept names — only the order ID is allowed for looking up orders.",
+    "disable_interruptions": false,
+    "force_pre_tool_speech": "auto",
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "execution_mode": "immediate",
+    "api_schema": {
+        "url": "https://<your-ngrok-link>/api/get-order-details",
+        "method": "GET",
+        "path_params_schema": [],
+        "query_params_schema": [
+            {
+                "id": "order_id",
+                "type": "string",
+                "value_type": "llm_prompt",
+                "description": "The order ID that was given to the user when the profile was saved.\nIt always starts with 'OUM' followed by 8 digits (e.g. OUM12345678).\nThis field is required.\nDo not accept a child's name — only the order ID is valid.",
+                "dynamic_variable": "",
+                "constant_value": "",
+                "enum": null,
+                "is_system_provided": false,
+                "required": true
+            }
+        ],
+        "request_body_schema": null,
+        "request_headers": [],
+        "auth_connection": null
+    },
+    "assignments": [],
+    "response_timeout_secs": 20,
+    "dynamic_variables": {
+        "dynamic_variable_placeholders": {}
+    }
+}
