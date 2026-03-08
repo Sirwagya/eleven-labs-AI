@@ -1,6 +1,6 @@
 # Tutorial — ElevenLabs Child Profile API
 
-A step-by-step guide to running the app locally, testing it with curl, and connecting it to an ElevenLabs Conversational Agent via a Server Tool.
+A step-by-step guide to running the app locally, testing all endpoints, and connecting it to an ElevenLabs Conversational Agent.
 
 ---
 
@@ -14,7 +14,7 @@ A step-by-step guide to running the app locally, testing it with curl, and conne
 6. [Test the API with curl](#6-test-the-api-with-curl)
 7. [Verify Data in MongoDB](#7-verify-data-in-mongodb)
 8. [Expose Your Server with ngrok](#8-expose-your-server-with-ngrok)
-9. [Configure the ElevenLabs Server Tool](#9-configure-the-elevenlabs-server-tool)
+9. [Configure the ElevenLabs Server Tools](#9-configure-the-elevenlabs-server-tools)
 10. [Talk to Your Agent](#10-talk-to-your-agent)
 11. [Troubleshooting](#11-troubleshooting)
 
@@ -22,22 +22,38 @@ A step-by-step guide to running the app locally, testing it with curl, and conne
 
 ## 1. What This App Does
 
-Your ElevenLabs voice agent has a conversation with a user and collects four pieces of information about a child:
+Your ElevenLabs voice agent has a conversation with a user and collects information about a child:
 
-| Field       | Type                   | Example                          |
-| ----------- | ---------------------- | -------------------------------- |
-| `name`      | string                 | `"Aarav"`                        |
-| `age`       | integer (> 0)          | `7`                              |
-| `gender`    | `"boy"` or `"girl"`    | `"boy"`                          |
-| `interests` | array of strings       | `["dinosaurs", "painting"]`      |
+| Field        | Type                        | Example                     |
+| ------------ | --------------------------- | --------------------------- |
+| `name`       | string (1–100 chars)        | `"Aarav"`                   |
+| `age`        | integer (1–18)              | `7`                         |
+| `gender`     | `"boy"` or `"girl"`         | `"boy"`                     |
+| `order_type` | `"story book"` or `"movie"` | `"story book"`              |
+| `interests`  | array of strings (max 10)   | `["dinosaurs", "painting"]` |
 
-Once the agent has all four fields, it calls the **save_child_profile** server tool, which sends a JSON POST request to your FastAPI backend. The backend validates the data, adds a `created_at` timestamp, and stores it in MongoDB.
+The agent can then:
+
+- **Create** an order → gets a unique order ID (e.g. `OUM12345678`)
+- **Look up** an order by its order ID
+- **Update** an order (change name, age, gender, order type, or interests)
+- **Cancel** an order (permanently delete it)
 
 **Flow:**
 
 ```
-User ↔ ElevenLabs Agent ──(server tool call)──▶ FastAPI ──▶ MongoDB
+User ↔ ElevenLabs Agent ──(server tool calls)──▶ FastAPI ──▶ MongoDB
 ```
+
+### Endpoints
+
+| Method   | Endpoint                 | Description                             |
+| -------- | ------------------------ | --------------------------------------- |
+| `POST`   | `/api/save-profile`      | Create a new profile (returns order ID) |
+| `GET`    | `/api/get-order-details` | Look up a profile by order ID           |
+| `PUT`    | `/api/update-order`      | Partially update an existing profile    |
+| `DELETE` | `/api/cancel-order`      | Cancel and delete a profile             |
+| `GET`    | `/health`                | Liveness check                          |
 
 ---
 
@@ -46,11 +62,8 @@ User ↔ ElevenLabs Agent ──(server tool call)──▶ FastAPI ──▶ Mo
 ### Python 3.11+
 
 ```bash
-# Check your version
 python3 --version
-
-# If needed, install via Homebrew
-brew install python@3.11
+# If needed: brew install python@3.11
 ```
 
 ### MongoDB Community 6.x / 7.x
@@ -65,7 +78,6 @@ brew install mongodb-community
 ```bash
 brew install ngrok
 # — or download from https://ngrok.com/download
-# Then authenticate (free account):
 ngrok config add-authtoken YOUR_AUTH_TOKEN
 ```
 
@@ -94,16 +106,9 @@ You should see `{ ok: 1 }`.
 ## 4. Set Up the Python Project
 
 ```bash
-# Navigate into the project folder
 cd "eleven labs AI"
-
-# Create a virtual environment
-python3 -m venv .venv
-
-# Activate it
-source .venv/bin/activate
-
-# Install dependencies
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -117,7 +122,7 @@ DATABASE_NAME=child_profiles
 LOG_LEVEL=INFO
 ```
 
-These are the defaults — you only need to edit this file if your MongoDB is running on a different host/port.
+These are the defaults — only edit if your MongoDB is on a different host/port.
 
 ---
 
@@ -137,13 +142,11 @@ INFO:     Indexes ensured on 'profiles' collection.
 
 ### Useful URLs
 
-| URL                            | What                           |
-| ------------------------------ | ------------------------------ |
-| http://localhost:8000/health   | Health check (`{"status":"healthy"}`) |
-| http://localhost:8000/docs     | Swagger UI (interactive docs)  |
-| http://localhost:8000/redoc    | ReDoc (alternative docs)       |
-
-Open http://localhost:8000/docs in your browser to explore the API visually.
+| URL                          | What                                  |
+| ---------------------------- | ------------------------------------- |
+| http://localhost:8000/health | Health check (`{"status":"healthy"}`) |
+| http://localhost:8000/docs   | Swagger UI (interactive docs)         |
+| http://localhost:8000/redoc  | ReDoc (alternative docs)              |
 
 ---
 
@@ -151,7 +154,7 @@ Open http://localhost:8000/docs in your browser to explore the API visually.
 
 Open a **new terminal** (keep the server running in the first one).
 
-### 6.1 — Send a valid profile
+### 6.1 — Create a profile
 
 ```bash
 curl -X POST http://localhost:8000/api/save-profile \
@@ -160,7 +163,54 @@ curl -X POST http://localhost:8000/api/save-profile \
     "name": "Aarav",
     "age": 7,
     "gender": "boy",
+    "order_type": "story book",
     "interests": ["dinosaurs", "painting", "cricket"]
+  }'
+```
+
+**Expected response (201 Created):**
+
+```json
+{
+  "status": "success",
+  "order_id": "OUM12345678"
+}
+```
+
+> Save this `order_id` — you'll need it for the next steps.
+
+### 6.2 — Look up an order
+
+```bash
+curl "http://localhost:8000/api/get-order-details?order_id=OUM12345678"
+```
+
+**Expected response (200):**
+
+```json
+{
+  "status": "success",
+  "result": {
+    "order_id": "OUM12345678",
+    "name": "Aarav",
+    "age": 7,
+    "gender": "boy",
+    "order_type": "story book",
+    "interests": ["dinosaurs", "painting", "cricket"],
+    "created_at": "2026-03-08T10:30:00+00:00"
+  }
+}
+```
+
+### 6.3 — Update an order
+
+```bash
+curl -X PUT http://localhost:8000/api/update-order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "order_id": "OUM12345678",
+    "age": 8,
+    "order_type": "movie"
   }'
 ```
 
@@ -169,107 +219,70 @@ curl -X POST http://localhost:8000/api/save-profile \
 ```json
 {
   "status": "success",
-  "id": "6830a1f2e4b0c5d3a1234567"
+  "message": "Order OUM12345678 updated successfully.",
+  "updated_fields": ["age", "order_type"]
 }
 ```
 
-The `id` is the MongoDB `_id` of the inserted document.
+### 6.4 — Cancel an order
 
-### 6.2 — Send with empty interests (valid)
+```bash
+curl -X DELETE "http://localhost:8000/api/cancel-order?order_id=OUM12345678"
+```
+
+**Expected response (200):**
+
+```json
+{
+  "status": "success",
+  "message": "Order OUM12345678 has been cancelled and removed."
+}
+```
+
+### 6.5 — Validation errors
+
+**Missing required field (→ 422):**
 
 ```bash
 curl -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Priya",
-    "age": 5,
-    "gender": "girl",
-    "interests": []
-  }'
+  -d '{"name": "Aarav", "age": 7, "gender": "boy"}'
 ```
 
-This is valid — `interests` can be an empty list.
-
-### 6.3 — Missing a required field (→ 422)
+**Invalid age (→ 422):**
 
 ```bash
 curl -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Aarav",
-    "age": 7,
-    "gender": "boy"
-  }'
+  -d '{"name": "Aarav", "age": 0, "gender": "boy", "order_type": "movie", "interests": []}'
 ```
 
-**Expected response (422):** Pydantic validation error listing the missing field (`interests`).
-
-### 6.4 — Extra field not allowed (→ 422)
+**Invalid order ID format (→ 400):**
 
 ```bash
-curl -X POST http://localhost:8000/api/save-profile \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Aarav",
-    "age": 7,
-    "gender": "boy",
-    "interests": ["drawing"],
-    "favorite_color": "blue"
-  }'
+curl "http://localhost:8000/api/get-order-details?order_id=INVALID"
 ```
-
-**Expected response (422):** `"Extra inputs are not permitted"` — the schema disallows unknown fields.
-
-### 6.5 — Invalid age (→ 422)
-
-```bash
-curl -X POST http://localhost:8000/api/save-profile \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Aarav",
-    "age": 0,
-    "gender": "boy",
-    "interests": []
-  }'
-```
-
-**Expected response (422):** `"Input should be greater than 0"`.
-
-### 6.6 — Invalid gender value (→ 422)
-
-```bash
-curl -X POST http://localhost:8000/api/save-profile \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Aarav",
-    "age": 7,
-    "gender": "other",
-    "interests": []
-  }'
-```
-
-**Expected response (422):** `"Input should be 'boy' or 'girl'"`.
 
 ---
 
 ## 7. Verify Data in MongoDB
 
-After sending a few successful requests, check what's stored:
-
 ```bash
 mongosh --eval 'use child_profiles; db.profiles.find().pretty()'
 ```
 
-You'll see documents like:
+Expected document shape:
 
 ```json
 {
-  "_id": ObjectId("6830a1f2e4b0c5d3a1234567"),
+  "_id": "ObjectId(...)",
+  "order_id": "OUM12345678",
   "name": "Aarav",
   "age": 7,
   "gender": "boy",
+  "order_type": "story book",
   "interests": ["dinosaurs", "painting", "cricket"],
-  "created_at": ISODate("2026-03-02T10:30:00.000Z")
+  "created_at": "ISODate(...)"
 }
 ```
 
@@ -279,11 +292,8 @@ You'll see documents like:
 # Count all profiles
 mongosh --eval 'use child_profiles; db.profiles.countDocuments()'
 
-# Find by name
-mongosh --eval 'use child_profiles; db.profiles.find({name: "Aarav"}).pretty()'
-
-# Find children older than 5
-mongosh --eval 'use child_profiles; db.profiles.find({age: {$gt: 5}}).pretty()'
+# Find by order_id
+mongosh --eval 'use child_profiles; db.profiles.findOne({order_id: "OUM12345678"})'
 
 # Delete all profiles (start fresh)
 mongosh --eval 'use child_profiles; db.profiles.deleteMany({})'
@@ -293,98 +303,64 @@ mongosh --eval 'use child_profiles; db.profiles.deleteMany({})'
 
 ## 8. Expose Your Server with ngrok
 
-ElevenLabs needs a public URL to reach your local server. That's what ngrok does.
-
-Open a **new terminal** and run:
+ElevenLabs needs a public URL to reach your local server.
 
 ```bash
 ngrok http 8000
 ```
 
-You'll see something like:
-
-```
-Forwarding   https://a1b2-203-0-113-42.ngrok-free.app -> http://localhost:8000
-```
-
-Copy the `https://...ngrok-free.app` URL. This is your **public endpoint**.
+Copy the `https://...ngrok-free.app` URL.
 
 ### Quick test through ngrok
 
 ```bash
-curl -X POST https://a1b2-203-0-113-42.ngrok-free.app/api/save-profile \
+curl -X POST https://YOUR-NGROK-URL/api/save-profile \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Test via ngrok",
+    "name": "Test",
     "age": 3,
     "gender": "girl",
+    "order_type": "movie",
     "interests": ["blocks"]
   }'
 ```
 
-If you get `{"status":"success","id":"..."}`, ngrok is forwarding correctly.
+If you get `{"status":"success","order_id":"OUM..."}`, ngrok is working.
 
-> **Tip:** The free ngrok URL changes every time you restart ngrok. You'll need to update the tool URL in ElevenLabs each time.
+> **Tip:** Free ngrok URLs change on restart. Update the tool URLs in ElevenLabs each time.
 
 ---
 
-## 9. Configure the ElevenLabs Server Tool
-
-This is the step that connects your voice agent to your backend.
+## 9. Configure the ElevenLabs Server Tools
 
 ### Step-by-step in the ElevenLabs dashboard
 
 1. Log in to [elevenlabs.io](https://elevenlabs.io) and open your **Agent**.
+2. Go to the **Tools** section.
+3. Add **4 tools** — one for each JSON config file in the project root:
 
-2. Go to the **Tools** section (left sidebar or agent settings).
+| Config File                                | Tool Name            | Method | Purpose         |
+| ------------------------------------------ | -------------------- | ------ | --------------- |
+| `elevenlabs_tool_config.json`              | `save_child_profile` | POST   | Create profiles |
+| `elevenlabs_get_order_tool_config.json`    | `get_order_details`  | GET    | Look up orders  |
+| `elevenlabs_update_order_tool_config.json` | `update_order`       | PUT    | Update orders   |
+| `elevenlabs_cancel_order_tool_config.json` | `cancel_order`       | DELETE | Cancel orders   |
 
-3. Click **Add Tool** → select **Server Tool** (also called Custom Tool / Webhook Tool depending on UI version).
+4. For each tool:
+   - Open the JSON file
+   - Replace `<your-ngrok-link>` with your actual ngrok URL
+   - Paste the full JSON content into the tool configuration
 
-4. Fill in the fields:
-
-   | Field         | Value |
-   | ------------- | ----- |
-   | **Name**      | `save_child_profile` |
-   | **Description** | `Save structured child profile data to the backend database. Call this tool after collecting the child's name, age, gender, and interests from the conversation.` |
-   | **URL**       | `https://<your-ngrok-url>/api/save-profile` |
-   | **Method**    | `POST` |
-
-5. For the **Parameters / Schema**, paste the contents of `elevenlabs_tool_config.json`:
-
-   ```json
-   {
-     "type": "object",
-     "properties": {
-       "name": {
-         "type": "string",
-         "description": "The child's name"
-       },
-       "age": {
-         "type": "integer",
-         "description": "The child's age in years"
-       },
-       "gender": {
-         "type": "string",
-         "enum": ["boy", "girl"],
-         "description": "The child's gender (boy or girl)"
-       },
-       "interests": {
-         "type": "array",
-         "items": { "type": "string" },
-         "description": "A list of the child's interests and hobbies"
-       }
-     },
-     "required": ["name", "age", "gender", "interests"]
-   }
-   ```
-
-6. Click **Save**.
+5. **Save** each tool.
 
 ### Update your Agent's system prompt
 
-Make sure the agent knows **when** to use the tool. Add something like this to the agent's system prompt:
-
-> You are a friendly assistant that talks to parents about their child. During the conversation, collect the child's **name**, **age**, **gender** (boy or girl), and **interests** (hobbies, favorite activities). Once you have all four pieces of information, call the `save_child_profile` tool to save the data. Confirm to the user that the profile has been saved.
+> You are a friendly assistant that helps parents create and manage personalized orders for their children. During the conversation:
+>
+> 1. **To create an order**, collect the child's name, age, gender (boy or girl), order type (story book or movie), and interests. Then call `save_child_profile`. Always tell the user their order ID (starts with "OUM").
+> 2. **To look up an order**, ask for the order ID and call `get_order_details`.
+> 3. **To update an order**, ask for the order ID and what they want to change, then call `update_order`.
+> 4. **To cancel an order**, ask for the order ID, confirm with the user, then call `cancel_order`.
 
 ---
 
@@ -397,23 +373,31 @@ Make sure the agent knows **when** to use the tool. Add something like this to t
 
 2. Open the ElevenLabs Agent playground and start a conversation.
 
-3. Tell the agent about a child, for example:
+3. Example conversations:
 
-   > "Hi, I'd like to register my son. His name is Aarav, he's 7 years old, and he loves dinosaurs and painting."
+   **Creating an order:**
 
-4. The agent will extract the fields, call the `save_child_profile` tool, and confirm.
+   > "Hi, I'd like to create an order for my son. His name is Aarav, he's 7 years old, and he loves dinosaurs and painting. I'd like a story book."
 
-5. Check your terminal — you should see logs like:
+   **Looking up an order:**
+
+   > "Can you check the status of my order? My order ID is OUM12345678."
+
+   **Updating an order:**
+
+   > "I'd like to change my order OUM12345678. Can you update the age to 8?"
+
+   **Cancelling an order:**
+
+   > "Please cancel my order OUM12345678."
+
+4. Check your terminal for logs like:
 
    ```
-   INFO | app.routes:save_profile:46 — Received profile for: Aarav (age 7)
-   INFO | app.routes:save_profile:53 — ✅  Saved profile 6830a1f2... for Aarav
-   ```
-
-6. Verify in MongoDB:
-
-   ```bash
-   mongosh --eval 'use child_profiles; db.profiles.find().sort({created_at: -1}).limit(1).pretty()'
+   INFO | ✅  Saved profile 6830a1f2... (order_id=OUM12345678) for Aarav
+   INFO | 🔍  Order lookup order_id=OUM12345678 → found
+   INFO | ✏️  Updated order OUM12345678 — fields: ['age']
+   INFO | 🗑️  Cancelled order OUM12345678
    ```
 
 ---
@@ -422,7 +406,7 @@ Make sure the agent knows **when** to use the tool. Add something like this to t
 
 ### "Connection refused" when starting the server
 
-MongoDB isn't running. Start it:
+MongoDB isn't running:
 
 ```bash
 brew services start mongodb-community
@@ -431,29 +415,31 @@ brew services start mongodb-community
 ### 422 errors from ElevenLabs
 
 The agent is sending data that doesn't match the schema. Check:
-- Is `age` an integer (not a string like `"7"`)?
-- Is `gender` exactly `"boy"` or `"girl"` (not `"male"` or `"Boy"`)?
+
+- Is `age` an integer between 1 and 18?
+- Is `gender` exactly `"boy"` or `"girl"`?
+- Is `order_type` exactly `"story book"` or `"movie"`?
 - Is `interests` an array (not a single string)?
 
-Look at the FastAPI logs for the detailed validation error.
+### Invalid order ID errors (400)
+
+The order ID must start with `OUM` followed by exactly 8 digits (e.g. `OUM12345678`).
 
 ### ngrok URL not working
 
-- Make sure ngrok is still running (free URLs expire after ~2 hours of inactivity).
-- Verify the URL ends with `/api/save-profile` in the ElevenLabs tool config.
-- Test the ngrok URL directly with curl first (see [Section 8](#8-expose-your-server-with-ngrok)).
+- Make sure ngrok is still running.
+- Verify all 4 tool URLs point to your current ngrok URL.
+- Test the ngrok URL directly with curl.
 
 ### Agent doesn't call the tool
 
 - Check that the tool is **enabled** in the agent settings.
-- Make sure the agent's system prompt instructs it to call the tool.
-- Verify the tool name matches exactly: `save_child_profile`.
+- Make sure the agent's system prompt instructs it to call the correct tool.
+- Verify the tool names match exactly.
 
 ### "Database not initialised" error
 
-The lifespan event didn't run, usually because:
-- MongoDB wasn't reachable at startup.
-- You're importing `app` incorrectly. Always start with `uvicorn app.main:app`.
+The lifespan event didn't run, usually because MongoDB wasn't reachable at startup. Always start with `uvicorn app.main:app`.
 
 ### Reset everything
 
@@ -472,14 +458,26 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```bash
 # ── Start everything ──────────────────────────────
 brew services start mongodb-community
-source .venv/bin/activate
+source venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload  # Terminal 1
 ngrok http 8000                                              # Terminal 2
 
-# ── Test ──────────────────────────────────────────
+# ── Test all endpoints ────────────────────────────
+# Create
 curl -s -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
-  -d '{"name":"Aarav","age":7,"gender":"boy","interests":["dinosaurs"]}' | python3 -m json.tool
+  -d '{"name":"Aarav","age":7,"gender":"boy","order_type":"story book","interests":["dinosaurs"]}' | python3 -m json.tool
+
+# Read
+curl -s "http://localhost:8000/api/get-order-details?order_id=OUM12345678" | python3 -m json.tool
+
+# Update
+curl -s -X PUT http://localhost:8000/api/update-order \
+  -H "Content-Type: application/json" \
+  -d '{"order_id":"OUM12345678","age":8}' | python3 -m json.tool
+
+# Delete
+curl -s -X DELETE "http://localhost:8000/api/cancel-order?order_id=OUM12345678" | python3 -m json.tool
 
 # ── Check DB ──────────────────────────────────────
 mongosh --eval 'use child_profiles; db.profiles.find().pretty()'

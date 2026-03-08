@@ -1,37 +1,47 @@
 # ElevenLabs Child Profile API
 
-FastAPI + MongoDB backend that receives **structured JSON** from an ElevenLabs Server Tool and stores child profiles.
+FastAPI + MongoDB backend that receives **structured JSON** from ElevenLabs Agent Server Tools and manages child profile orders.
 
 ## What this app does
 
-- Exposes `POST /api/save-profile` for direct tool calls from ElevenLabs
-- Validates strict schema with Pydantic
-- Stores profiles in MongoDB (`child_profiles.profiles`)
-- Adds `created_at` (UTC) automatically
-- Provides `GET /health` for liveness checks
+| Method   | Endpoint                 | Description                                         |
+| -------- | ------------------------ | --------------------------------------------------- |
+| `POST`   | `/api/save-profile`      | Create a new child profile (returns `OUM` order ID) |
+| `GET`    | `/api/get-order-details` | Look up a profile by order ID                       |
+| `PUT`    | `/api/update-order`      | Update fields on an existing profile                |
+| `DELETE` | `/api/cancel-order`      | Cancel (delete) a profile                           |
+| `GET`    | `/health`                | Liveness check                                      |
+
+Each profile gets a unique **order ID** (format: `OUM` + 8 random digits, e.g. `OUM12345678`).
 
 ---
 
-## Required JSON schema
+## JSON Schema
+
+### Save Profile (POST)
 
 ```json
 {
-  "name": "string",
+  "name": "Aarav",
   "age": 7,
   "gender": "boy",
-  "interests": ["string"]
+  "order_type": "story book",
+  "interests": ["dinosaurs", "painting"]
 }
 ```
 
-Validation rules:
-- `age` must be `> 0`
-- `gender` must be `boy | girl`
-- `interests` must be an array (can be empty)
-- extra fields are rejected
+### Validation Rules
+
+- `name` — 1–100 characters
+- `age` — 1–18
+- `gender` — `"boy"` or `"girl"`
+- `order_type` — `"story book"` or `"movie"`
+- `interests` — array of strings (max 10 items)
+- Extra fields are rejected
 
 ---
 
-## Local setup
+## Local Setup
 
 ### 1) Prerequisites
 
@@ -39,12 +49,12 @@ Validation rules:
 - MongoDB Community (local)
 - ngrok
 
-### 2) Install deps
+### 2) Install dependencies
 
 ```bash
 cd "eleven labs AI"
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -71,13 +81,11 @@ mongosh --eval "db.runCommand({ ping: 1 })"
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Available endpoints:
-- `http://localhost:8000/health`
-- `http://localhost:8000/docs`
+Swagger docs: http://localhost:8000/docs
 
 ---
 
-## ElevenLabs Server Tool setup (priority)
+## ElevenLabs Server Tools Setup
 
 ### 1) Start ngrok tunnel
 
@@ -85,59 +93,28 @@ Available endpoints:
 ngrok http 8000
 ```
 
-Copy the HTTPS URL (example: `https://abcd-1234.ngrok-free.app`).
+Copy the HTTPS URL (e.g. `https://abcd-1234.ngrok-free.app`).
 
-### 2) Tool endpoint URL
+### 2) Add tools in ElevenLabs
 
-Use:
+There are **4 tool configs** in the project root — paste each into the ElevenLabs dashboard after replacing `<your-ngrok-link>` with your ngrok URL:
 
-```text
-https://<your-ngrok-url>/api/save-profile
-```
+| File                                       | Tool Name            | Method |
+| ------------------------------------------ | -------------------- | ------ |
+| `elevenlabs_tool_config.json`              | `save_child_profile` | POST   |
+| `elevenlabs_get_order_tool_config.json`    | `get_order_details`  | GET    |
+| `elevenlabs_update_order_tool_config.json` | `update_order`       | PUT    |
+| `elevenlabs_cancel_order_tool_config.json` | `cancel_order`       | DELETE |
 
-### 3) Create tool in ElevenLabs
+### 3) Agent system prompt suggestion
 
-Use this config (same as `elevenlabs_tool_config.json`):
-
-```json
-{
-  "name": "save_child_profile",
-  "description": "Save structured child profile to backend",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "name": { "type": "string" },
-      "age": { "type": "integer" },
-      "gender": {
-        "type": "string",
-        "enum": ["male", "female"]
-      },
-      "type": {
-        "type": "string",
-        "enum": ["boy", "girl"]
-      },
-      "interests": {
-        "type": "array",
-        "items": { "type": "string" }
-      }
-    },
-    "required": ["name", "age", "gender", "type", "interests"]
-  }
-}
-```
-
-### 4) Agent instruction suggestion
-
-Tell the agent to:
-- collect `name`, `age`, `gender`, `type`, `interests`
-- call `save_child_profile` only when all required fields are available
-- keep `interests` as an array
+> You are a friendly assistant that helps parents create and manage orders for their children. During the conversation, collect the child's **name**, **age**, **gender** (boy or girl), **order type** (story book or movie), and **interests**. Once you have all fields, call the `save_child_profile` tool. Always tell the user their order ID (starts with "OUM") after saving. To look up, update, or cancel an order, ask the user for their order ID.
 
 ---
 
-## API test with curl
+## API Test with curl
 
-### Successful request
+### Save a profile
 
 ```bash
 curl -X POST http://localhost:8000/api/save-profile \
@@ -146,37 +123,43 @@ curl -X POST http://localhost:8000/api/save-profile \
     "name": "Aarav",
     "age": 7,
     "gender": "boy",
+    "order_type": "story book",
     "interests": ["dinosaurs", "painting"]
   }'
 ```
 
-Response:
+Response (`201 Created`):
 
 ```json
 {
   "status": "success",
-  "id": "69a5a5e0c5de59bc81181cc4"
+  "order_id": "OUM12345678"
 }
 ```
 
-### Validation failure example
+### Get order details
 
 ```bash
-curl -X POST http://localhost:8000/api/save-profile \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Aarav",
-    "age": 0,
-    "gender": "boy",
-    "interests": []
-  }'
+curl "http://localhost:8000/api/get-order-details?order_id=OUM12345678"
 ```
 
-Expected: `422 Unprocessable Entity`
+### Update order
+
+```bash
+curl -X PUT http://localhost:8000/api/update-order \
+  -H "Content-Type: application/json" \
+  -d '{"order_id": "OUM12345678", "age": 8}'
+```
+
+### Cancel order
+
+```bash
+curl -X DELETE "http://localhost:8000/api/cancel-order?order_id=OUM12345678"
+```
 
 ---
 
-## Verify document in MongoDB
+## Verify in MongoDB
 
 ```bash
 mongosh child_profiles --quiet --eval 'db.profiles.find().sort({created_at:-1}).limit(1).toArray()'
@@ -187,9 +170,11 @@ Expected shape:
 ```json
 {
   "_id": "ObjectId(...)",
+  "order_id": "OUM12345678",
   "name": "Aarav",
   "age": 7,
   "gender": "boy",
+  "order_type": "story book",
   "interests": ["dinosaurs", "painting"],
   "created_at": "ISODate(...)"
 }
@@ -197,15 +182,18 @@ Expected shape:
 
 ---
 
-## Project structure
+## Project Structure
 
 ```text
 eleven labs AI/
 ├── .env
 ├── README.md
 ├── TUTORIAL.md
-├── elevenlabs_tool_config.json
 ├── requirements.txt
+├── elevenlabs_tool_config.json
+├── elevenlabs_get_order_tool_config.json
+├── elevenlabs_update_order_tool_config.json
+├── elevenlabs_cancel_order_tool_config.json
 └── app/
     ├── __init__.py
     ├── config.py
