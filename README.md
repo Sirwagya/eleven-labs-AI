@@ -22,21 +22,39 @@ Each profile gets a unique **order ID** (format: `OUM` + 8 random digits, e.g. `
 
 ```json
 {
+  "parent_name": "Rahul",
+  "phone_number": "+919876543210",
+  "email": "rahul@example.com",
+  "address": {
+    "pincode": "400001",
+    "Country": "India",
+    "State": "Maharashtra",
+    "city": "Mumbai",
+    "locality": "Colaba"
+  },
   "name": "Aarav",
   "age": 7,
   "gender": "boy",
   "order_type": "story book",
-  "interests": ["dinosaurs", "painting"]
+  "character": "brave, kind",
+  "interests": ["dinosaurs", "painting"],
+  "extra_message": "Make it colorful"
 }
 ```
 
 ### Validation Rules
 
-- `name` — 1–100 characters
-- `age` — 1–18
-- `gender` — `"boy"` or `"girl"`
-- `order_type` — `"story book"` or `"movie"`
+- `parent_name` — string (1–100 chars, required)
+- `phone_number` — string (required)
+- `email` — string (optional)
+- `address` — object with `pincode`, `Country`, `State`, `city`, `locality` (required)
+- `name` — string (1–100 chars, required)
+- `age` — integer (1–18, required)
+- `gender` — `"boy"` or `"girl"` (required)
+- `order_type` — `"story book"`, `"movie"`, or `"combo story book + animated movie"` (required)
+- `character` — string (optional)
 - `interests` — array of strings (max 10 items)
+- `extra_message` — string (optional)
 - Extra fields are rejected
 
 ---
@@ -108,7 +126,7 @@ There are **4 tool configs** in the project root — paste each into the ElevenL
 
 ### 3) Agent system prompt suggestion
 
-> You are a friendly assistant that helps parents create and manage orders for their children. During the conversation, collect the child's **name**, **age**, **gender** (boy or girl), **order type** (story book or movie), and **interests**. Once you have all fields, call the `save_child_profile` tool. Always tell the user their order ID (starts with "OUM") after saving. To look up, update, or cancel an order, ask the user for their order ID.
+> You are a friendly assistant that helps parents create and manage orders for their children. During the conversation, collect the child's **name**, **age**, **gender** (boy or girl), **order type** (story book, movie, or combo story book + animated movie), **character qualities** (optional), and **interests**. Once you have all fields, call the `save_child_profile` tool. Always tell the user their order ID (starts with "OUM") after saving. To look up, update, or cancel an order, ask the user for their order ID.
 
 ---
 
@@ -120,10 +138,20 @@ There are **4 tool configs** in the project root — paste each into the ElevenL
 curl -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
   -d '{
+    "parent_name": "Rahul",
+    "phone_number": "+919876543210",
+    "address": {
+      "pincode": "400001",
+      "Country": "India",
+      "State": "Maharashtra",
+      "city": "Mumbai",
+      "locality": "Colaba"
+    },
     "name": "Aarav",
     "age": 7,
     "gender": "boy",
     "order_type": "story book",
+    "character": "brave, kind",
     "interests": ["dinosaurs", "painting"]
   }'
 ```
@@ -171,11 +199,22 @@ Expected shape:
 {
   "_id": "ObjectId(...)",
   "order_id": "OUM12345678",
+  "parent_name": "Rahul",
+  "phone_number": "+919876543210",
+  "address": {
+    "pincode": "400001",
+    "Country": "India",
+    "State": "Maharashtra",
+    "city": "Mumbai",
+    "locality": "Colaba"
+  },
   "name": "Aarav",
   "age": 7,
   "gender": "boy",
   "order_type": "story book",
+  "character": "brave, kind",
   "interests": ["dinosaurs", "painting"],
+  "status": "pending",
   "created_at": "ISODate(...)"
 }
 ```

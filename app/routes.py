@@ -39,11 +39,18 @@ def _doc_to_response(doc: dict) -> OrderDetailsResponse:
     """Convert a raw MongoDB document to an OrderDetailsResponse."""
     return OrderDetailsResponse(
         order_id=doc.get("order_id", ""),
+        parent_name=doc.get("parent_name", ""),
+        phone_number=doc.get("phone_number"),
+        email=doc.get("email"),
+        address=doc.get("address"),
         name=doc.get("name", ""),
         age=doc.get("age", 0),
         gender=doc.get("gender", ""),
         order_type=doc.get("order_type", ""),
         interests=doc.get("interests", []),
+        character=doc.get("character"),
+        extra_message=doc.get("extra_message"),
+        status=doc.get("status", "pending"),
         created_at=doc["created_at"].isoformat() if doc.get("created_at") else "",
     )
 
@@ -202,16 +209,23 @@ async def update_order(
 
     # Build the $set document from only the provided (non-None) fields
     update_fields: dict = {}
-    updatable = ["name", "age", "gender", "order_type", "interests"]
+    updatable = [
+        "parent_name", "phone_number", "email", "address",
+        "name", "age", "gender", "order_type", "interests",
+        "character", "extra_message", "status"
+    ]
     for field in updatable:
         value = getattr(body, field)
         if value is not None:
-            update_fields[field] = value
+            if hasattr(value, "model_dump"):
+                update_fields[field] = value.model_dump()
+            else:
+                update_fields[field] = value
 
     if not update_fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields to update. Provide at least one of: name, age, gender, order_type, interests.",
+            detail="No fields to update. Provide at least one of: name, age, gender, order_type, interests, character.",
         )
 
     # Add an updated_at timestamp

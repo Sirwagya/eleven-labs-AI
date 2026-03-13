@@ -26,17 +26,23 @@ Your ElevenLabs voice agent has a conversation with a user and collects informat
 
 | Field        | Type                        | Example                     |
 | ------------ | --------------------------- | --------------------------- |
+| `parent_name`| string (1–100 chars)        | `"Rahul"`                   |
+| `phone_number`| string                     | `"+919876543210"`           |
+| `email`      | string (optional)           | `"rahul@example.com"`       |
+| `address`    | object                      | `{"pincode": "400001"...}`  |
 | `name`       | string (1–100 chars)        | `"Aarav"`                   |
 | `age`        | integer (1–18)              | `7`                         |
 | `gender`     | `"boy"` or `"girl"`         | `"boy"`                     |
-| `order_type` | `"story book"` or `"movie"` | `"story book"`              |
+| `order_type` | `"story book"`, `"movie"`, or `"combo..."` | `"story book"`              |
+| `character`  | string (optional)           | `"brave, kind"`             |
 | `interests`  | array of strings (max 10)   | `["dinosaurs", "painting"]` |
+| `extra_message`| string (optional)         | `"Make it colorful"`        |
 
 The agent can then:
 
 - **Create** an order → gets a unique order ID (e.g. `OUM12345678`)
 - **Look up** an order by its order ID
-- **Update** an order (change name, age, gender, order type, or interests)
+- **Update** an order (change name, age, gender, order type, character, or interests)
 - **Cancel** an order (permanently delete it)
 
 **Flow:**
@@ -160,10 +166,20 @@ Open a **new terminal** (keep the server running in the first one).
 curl -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
   -d '{
+    "parent_name": "Rahul",
+    "phone_number": "+919876543210",
+    "address": {
+      "pincode": "400001",
+      "Country": "India",
+      "State": "Maharashtra",
+      "city": "Mumbai",
+      "locality": "Colaba"
+    },
     "name": "Aarav",
     "age": 7,
     "gender": "boy",
     "order_type": "story book",
+    "character": "brave, kind",
     "interests": ["dinosaurs", "painting", "cricket"]
   }'
 ```
@@ -192,10 +208,21 @@ curl "http://localhost:8000/api/get-order-details?order_id=OUM12345678"
   "status": "success",
   "result": {
     "order_id": "OUM12345678",
+    "parent_name": "Rahul",
+    "phone_number": "+919876543210",
+    "email": null,
+    "address": {
+      "pincode": "400001",
+      "Country": "India",
+      "State": "Maharashtra",
+      "city": "Mumbai",
+      "locality": "Colaba"
+    },
     "name": "Aarav",
     "age": 7,
     "gender": "boy",
     "order_type": "story book",
+    "character": "brave, kind",
     "interests": ["dinosaurs", "painting", "cricket"],
     "created_at": "2026-03-08T10:30:00+00:00"
   }
@@ -246,7 +273,7 @@ curl -X DELETE "http://localhost:8000/api/cancel-order?order_id=OUM12345678"
 ```bash
 curl -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
-  -d '{"name": "Aarav", "age": 7, "gender": "boy"}'
+  -d '{"parent_name": "Rahul", "phone_number": "+919876543210", "address": {"pincode": "400", "Country": "IN", "State": "MH", "city": "MUM", "locality": "Colaba"}, "name": "Aarav", "age": 7, "gender": "boy"}'
 ```
 
 **Invalid age (→ 422):**
@@ -254,7 +281,7 @@ curl -X POST http://localhost:8000/api/save-profile \
 ```bash
 curl -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
-  -d '{"name": "Aarav", "age": 0, "gender": "boy", "order_type": "movie", "interests": []}'
+  -d '{"parent_name": "Rahul", "phone_number": "123", "address": {"pincode": "400", "Country": "IN", "State": "MH", "city": "MUM", "locality": "Colaba"}, "name": "Aarav", "age": 0, "gender": "boy", "order_type": "movie", "character": "brave", "interests": []}'
 ```
 
 **Invalid order ID format (→ 400):**
@@ -277,10 +304,20 @@ Expected document shape:
 {
   "_id": "ObjectId(...)",
   "order_id": "OUM12345678",
+  "parent_name": "Rahul",
+  "phone_number": "+919876543210",
+  "address": {
+    "pincode": "400001",
+    "Country": "India",
+    "State": "Maharashtra",
+    "city": "Mumbai",
+    "locality": "Colaba"
+  },
   "name": "Aarav",
   "age": 7,
   "gender": "boy",
   "order_type": "story book",
+  "character": "brave, kind",
   "interests": ["dinosaurs", "painting", "cricket"],
   "created_at": "ISODate(...)"
 }
@@ -317,10 +354,14 @@ Copy the `https://...ngrok-free.app` URL.
 curl -X POST https://YOUR-NGROK-URL/api/save-profile \
   -H "Content-Type: application/json" \
   -d '{
+    "parent_name": "Test Parent",
+    "phone_number": "1234567890",
+    "address": {"pincode": "123", "Country": "US", "State": "NY", "city": "NY", "locality": "Test"},
     "name": "Test",
     "age": 3,
     "gender": "girl",
     "order_type": "movie",
+    "character": "cute",
     "interests": ["blocks"]
   }'
 ```
@@ -357,7 +398,7 @@ If you get `{"status":"success","order_id":"OUM..."}`, ngrok is working.
 
 > You are a friendly assistant that helps parents create and manage personalized orders for their children. During the conversation:
 >
-> 1. **To create an order**, collect the child's name, age, gender (boy or girl), order type (story book or movie), and interests. Then call `save_child_profile`. Always tell the user their order ID (starts with "OUM").
+> 1. **To create an order**, collect the child's name, age, gender (boy or girl), order type (story book, movie, or combo story book + animated movie), character qualities (optional), and interests. Then call `save_child_profile`. Always tell the user their order ID (starts with "OUM").
 > 2. **To look up an order**, ask for the order ID and call `get_order_details`.
 > 3. **To update an order**, ask for the order ID and what they want to change, then call `update_order`.
 > 4. **To cancel an order**, ask for the order ID, confirm with the user, then call `cancel_order`.
@@ -466,7 +507,7 @@ ngrok http 8000                                              # Terminal 2
 # Create
 curl -s -X POST http://localhost:8000/api/save-profile \
   -H "Content-Type: application/json" \
-  -d '{"name":"Aarav","age":7,"gender":"boy","order_type":"story book","interests":["dinosaurs"]}' | python3 -m json.tool
+  -d '{"parent_name":"Rahul","phone_number":"1234567890","address":{"pincode":"11","Country":"IN","State":"MH","city":"PU","locality":"K"},"name":"Aarav","age":7,"gender":"boy","order_type":"story book","character":"brave","interests":["dinosaurs"]}' | python3 -m json.tool
 
 # Read
 curl -s "http://localhost:8000/api/get-order-details?order_id=OUM12345678" | python3 -m json.tool

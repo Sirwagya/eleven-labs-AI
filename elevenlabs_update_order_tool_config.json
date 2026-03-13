@@ -1,7 +1,7 @@
 {
     "type": "webhook",
     "name": "update_order",
-    "description": "Update an existing child profile/order in the backend database. The user must provide their order ID (starts with 'OUM' followed by 8 digits). Then ask which fields they want to change — name, age, gender, order type, or interests. Only send the fields that need to change.",
+    "description": "Update an existing child profile/order in the backend database. The user must provide their order ID (starts with 'OUM' followed by 8 digits). Then ask which fields they want to change — name, age, gender, order type, character, or interests. Only send the fields that need to change.",
     "disable_interruptions": false,
     "force_pre_tool_speech": "auto",
     "tool_call_sound": null,
@@ -28,6 +28,17 @@
                     "enum": null,
                     "is_system_provided": false,
                     "required": true
+                },
+                {
+                    "id": "parent_name",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new parent's name.\nOnly include this field if the user wants to change the parent's name.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
                 },
                 {
                     "id": "name",
@@ -69,12 +80,13 @@
                     "id": "order_type",
                     "type": "string",
                     "value_type": "llm_prompt",
-                    "description": "The new order type.\nMust be either \"story book\" or \"movie\".\nOnly include this field if the user wants to change the order type.",
+                    "description": "The new order type.\nMust be either \"story book\", \"movie\", or \"combo story book + animated movie\".\nOnly include this field if the user wants to change the order type.",
                     "dynamic_variable": "",
                     "constant_value": "",
                     "enum": [
                         "story book",
-                        "movie"
+                        "movie",
+                        "combo story book + animated movie"
                     ],
                     "is_system_provided": false,
                     "required": false
@@ -96,6 +108,125 @@
                     },
                     "required": false,
                     "value_type": "llm_prompt"
+                },
+                {
+                    "id": "character",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new character qualities for the child.\nOnly include this field if the user wants to change the character qualities.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "email",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new email address. Only include this field if the user wants to change the email.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "phone_number",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new phone number. Only include this field if the user wants to change the phone number.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "address",
+                    "type": "object",
+                    "description": "The new delivery address of the user. Only include this field if the user wants to change the address.",
+                    "properties": [
+                        {
+                            "id": "pincode",
+                            "type": "string",
+                            "value_type": "llm_prompt",
+                            "description": "The new pincode.",
+                            "dynamic_variable": "",
+                            "constant_value": "",
+                            "enum": null,
+                            "is_system_provided": false,
+                            "required": false
+                        },
+                        {
+                            "id": "Country",
+                            "type": "string",
+                            "value_type": "llm_prompt",
+                            "description": "The new country.",
+                            "dynamic_variable": "",
+                            "constant_value": "",
+                            "enum": null,
+                            "is_system_provided": false,
+                            "required": false
+                        },
+                        {
+                            "id": "State",
+                            "type": "string",
+                            "value_type": "llm_prompt",
+                            "description": "The new state.",
+                            "dynamic_variable": "",
+                            "constant_value": "",
+                            "enum": null,
+                            "is_system_provided": false,
+                            "required": false
+                        },
+                        {
+                            "id": "city",
+                            "type": "string",
+                            "value_type": "llm_prompt",
+                            "description": "The new city.",
+                            "dynamic_variable": "",
+                            "constant_value": "",
+                            "enum": null,
+                            "is_system_provided": false,
+                            "required": false
+                        },
+                        {
+                            "id": "locality",
+                            "type": "string",
+                            "value_type": "llm_prompt",
+                            "description": "The new locality.",
+                            "dynamic_variable": "",
+                            "constant_value": "",
+                            "enum": null,
+                            "is_system_provided": false,
+                            "required": false
+                        }
+                    ],
+                    "required": false,
+                    "value_type": "llm_prompt"
+                },
+                {
+                    "id": "extra_message",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new extra message or specific instructions. Only include this field if the user wants to change it.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
+                },
+                {
+                    "id": "status",
+                    "type": "string",
+                    "value_type": "llm_prompt",
+                    "description": "The new status of the order. Only include this field if the user explicitly wants to change it.",
+                    "dynamic_variable": "",
+                    "constant_value": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "required": false
                 }
             ],
             "required": false,

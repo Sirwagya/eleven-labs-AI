@@ -1,7 +1,7 @@
 {
   "type": "webhook",
   "name": "save_child_profile",
-  "description": "Save structured child profile data to the backend database. Call this tool ONLY after collecting all required fields: name, age, gender (boy or girl), order_type (story book or movie), and interests (array of strings). The system will return a unique order ID starting with OUM.",
+  "description": "Save structured child profile data to the backend database. Call this tool ONLY after collecting all required fields: parent_name, name, age, gender (boy or girl), order_type (story book, movie, or combo story book + animated movie), interests (array of strings), phone_number, and address (pincode, Country, State, city, locality). Email, character, and extra_message are optional. The system will return a unique order ID starting with OUM.",
   "disable_interruptions": false,
   "force_pre_tool_speech": "auto",
   "tool_call_sound": null,
@@ -16,8 +16,19 @@
     "request_body_schema": {
       "id": "body",
       "type": "object",
-      "description": "Use this tool to save a structured child profile to the backend database.\n\nCall this tool ONLY after collecting all required fields from the user:\n- name\n- age\n- gender (must be \"boy\" or \"girl\")\n- order_type (must be \"story book\" or \"movie\")\n- interests (must be an array of strings)\n\nDo not summarize.\nDo not send free text.\nSend structured JSON exactly matching the defined schema.\nOnly call the tool once all fields are clearly provided.\n\nAll fields are required.\nIf any required field is missing, ask the user for clarification before calling the tool.\nOnly call the tool once all values are confidently extracted.\n\nThe response will contain an order_id starting with 'OUM' — always tell the user their order ID after saving.",
+      "description": "Use this tool to save a structured child profile to the backend database.\n\nCall this tool ONLY after collecting all required fields from the user:\n- parent_name\n- name\n- age\n- gender (must be \"boy\" or \"girl\")\n- order_type (must be \"story book\", \"movie\", or \"combo story book + animated movie\")\n- interests (must be an array of strings)\n- phone_number\n- address (containing pincode, Country, State, city, locality)\n\nDo not summarize.\nDo not send free text.\nSend structured JSON exactly matching the defined schema.\nOnly call the tool once all fields are clearly provided.\n\nemail, character, and extra_message are optional.\nIf any required field is missing, ask the user for clarification before calling the tool.\nOnly call the tool once all values are confidently extracted.\n\nThe response will contain an order_id starting with 'OUM' — always tell the user their order ID after saving.",
       "properties": [
+        {
+          "id": "parent_name",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "The parent's name exactly as provided by the user.\nReturn only the name string.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
         {
           "id": "name",
           "type": "string",
@@ -58,12 +69,13 @@
           "id": "order_type",
           "type": "string",
           "value_type": "llm_prompt",
-          "description": "The type of order the user wants.\nMust be either \"story book\" or \"movie\".\nAsk the user whether they want a story book or a movie if not already specified.",
+          "description": "The type of order the user wants.\nMust be either \"story book\", \"movie\", or \"combo story book + animated movie\".\nAsk the user whether they want a story book or a movie if not already specified.",
           "dynamic_variable": "",
           "constant_value": "",
           "enum": [
             "story book",
-            "movie"
+            "movie",
+            "combo story book + animated movie"
           ],
           "is_system_provided": false,
           "required": true
@@ -85,6 +97,114 @@
           },
           "required": true,
           "value_type": "llm_prompt"
+        },
+        {
+          "id": "character",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "The child's character qualities as described by the user (e.g., brave, kind, etc.).\nThis field is optional.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        },
+        {
+          "id": "email",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "The email address of the user. This field is optional.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        },
+        {
+          "id": "phone_number",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "The phone number of the user. Collect this from the user. This field is required.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
+        {
+          "id": "address",
+          "type": "object",
+          "description": "The delivery address of the user. Ask the user for their pincode, country, state, city, and locality.",
+          "properties": [
+            {
+              "id": "pincode",
+              "type": "string",
+              "value_type": "llm_prompt",
+              "description": "The pincode or postal code of the address.",
+              "dynamic_variable": "",
+              "constant_value": "",
+              "enum": null,
+              "is_system_provided": false,
+              "required": true
+            },
+            {
+              "id": "Country",
+              "type": "string",
+              "value_type": "llm_prompt",
+              "description": "The country of the address.",
+              "dynamic_variable": "",
+              "constant_value": "",
+              "enum": null,
+              "is_system_provided": false,
+              "required": true
+            },
+            {
+              "id": "State",
+              "type": "string",
+              "value_type": "llm_prompt",
+              "description": "The state or province of the address.",
+              "dynamic_variable": "",
+              "constant_value": "",
+              "enum": null,
+              "is_system_provided": false,
+              "required": true
+            },
+            {
+              "id": "city",
+              "type": "string",
+              "value_type": "llm_prompt",
+              "description": "The city of the address.",
+              "dynamic_variable": "",
+              "constant_value": "",
+              "enum": null,
+              "is_system_provided": false,
+              "required": true
+            },
+            {
+              "id": "locality",
+              "type": "string",
+              "value_type": "llm_prompt",
+              "description": "The locality, street, or neighborhood of the address.",
+              "dynamic_variable": "",
+              "constant_value": "",
+              "enum": null,
+              "is_system_provided": false,
+              "required": true
+            }
+          ],
+          "required": true,
+          "value_type": "llm_prompt"
+        },
+        {
+          "id": "extra_message",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Any extra message or specific instructions from the user. This field is optional.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
         }
       ],
       "required": false,
